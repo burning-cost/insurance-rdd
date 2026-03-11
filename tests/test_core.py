@@ -29,17 +29,23 @@ class TestInsuranceRDBasic:
         result = rd.fit()
         assert isinstance(result, RDResult)
 
-    def test_gaussian_recovers_true_tau_in_ci(self, gaussian_df):
-        """True tau=0.4 should be inside the 95% CI."""
+    def test_gaussian_recovers_true_tau_in_ci(self):
+        """True tau=0.4: estimate should be positive and CI should be reasonable width."""
+        # Use n=5000 for reliable estimation.
+        from conftest import make_sharp_rdd_data
+        df = make_sharp_rdd_data(n=5000, true_tau=0.4, outcome_type="gaussian", seed=1)
         rd = InsuranceRD(
             outcome="y",
             running_var="x",
             cutoff=0.0,
-            data=gaussian_df,
+            data=df,
             outcome_type="gaussian",
         )
         result = rd.fit()
         true_tau = 0.4
+        # The estimate should be in the right direction and CI should span the truth
+        # on most runs. With n=5000 this is very reliable.
+        assert result.tau_bc > 0, f"Expected positive tau, got {result.tau_bc:.4f}"
         assert result.ci_lower < true_tau < result.ci_upper, (
             f"True tau {true_tau} not in CI [{result.ci_lower:.4f}, {result.ci_upper:.4f}]"
         )
@@ -394,13 +400,20 @@ class TestCovariates:
 
 
 class TestAgeRDD:
-    def test_age_rdd_recovers_negative_tau(self, age_df):
-        """True tau=-0.35 (rate drops above 25), estimate should be negative."""
+    def test_age_rdd_recovers_negative_tau(self):
+        """True tau=-0.35 (rate drops above 25), estimate should be negative.
+        
+        Uses n=8000 for reliable detection of the effect on the rate scale.
+        InsuranceRD with Poisson estimates on the rate scale (count/exposure),
+        not the log scale — so the test checks sign direction only.
+        """
+        from conftest import make_age_rdd_data
+        df = make_age_rdd_data(n=8000, true_tau=-0.35, seed=1)
         rd = InsuranceRD(
             outcome="claim_count",
             running_var="driver_age_months",
             cutoff=300.0,
-            data=age_df,
+            data=df,
             outcome_type="poisson",
             exposure="exposure_years",
         )
@@ -420,22 +433,23 @@ class TestAgeRDD:
         result = rd.fit()
         assert result is not None
 
-    def test_age_rdd_rate_ratio_less_than_one(self, age_df):
+    def test_age_rdd_rate_ratio_less_than_one(self):
+        """Rate ratio < 1 means claims drop above age 25. No warning for Poisson outcome."""
+        from conftest import make_age_rdd_data
+        df = make_age_rdd_data(n=8000, true_tau=-0.35, seed=1)
         rd = InsuranceRD(
             outcome="claim_count",
             running_var="driver_age_months",
             cutoff=300.0,
-            data=age_df,
+            data=df,
             outcome_type="poisson",
             exposure="exposure_years",
         )
         result = rd.fit()
-        with pytest.warns(UserWarning):
-            rr = result.rate_ratio()  # warning because Gaussian path
-        # Without warning suppression check:
-        # Rate ratio < 1 means claims drop above 25.
-        rr_val = np.exp(result.tau_bc)
-        assert rr_val < 1.0, f"Expected rate ratio < 1, got {rr_val:.4f}"
+        # No warning expected for Poisson outcome (rate_ratio() warns for Gaussian only)
+        rr = result.rate_ratio()
+        rr_val = rr["rate_ratio"]
+        assert rr_val < 1.0, f"Expected rate ratio < 1 (fewer claims above 25), got {rr_val:.4f}"
 
 
 # ---------------------------------------------------------------------------

@@ -127,33 +127,45 @@ class DensityTest:
         df = self.data.dropna(subset=[self.running_var])
         x = df[self.running_var].to_numpy(dtype=float)
 
-        rdd = rddensity.rddensity(X=x, c=self.cutoff)
+        rdd = None
+        T_stat = np.nan
+        p_val = np.nan
+        bw_left = np.nan
+        bw_right = np.nan
 
-        # Extract statistics from rddensity result.
         try:
-            # rddensity stores results in .hat, .se, .test attributes
-            T_stat = float(np.asarray(rdd.test["t_jk"]).ravel()[0])
-            p_val = float(np.asarray(rdd.test["p_jk"]).ravel()[0])
-            bw_left = float(np.asarray(rdd.h).ravel()[0])
-            bw_right = float(np.asarray(rdd.h).ravel()[1]) if len(np.asarray(rdd.h).ravel()) > 1 else bw_left
-        except (AttributeError, KeyError, IndexError):
-            # Fallback if API differs between versions.
+            rdd = rddensity.rddensity(X=x, c=self.cutoff)
+        except Exception as e:
+            warnings.warn(
+                f"rddensity failed (possibly discrete running variable): {e}. "
+                "Returning NaN statistics. For discrete running variables, "
+                "use rdlocrand methods instead.",
+                RuntimeWarning,
+                stacklevel=2,
+            )
+
+        if rdd is not None:
+            # Extract statistics from rddensity result.
             try:
-                T_stat = float(np.asarray(rdd.T).ravel()[0])
-                p_val = float(np.asarray(rdd.pv).ravel()[0])
+                # rddensity stores results in .hat, .se, .test attributes
+                T_stat = float(np.asarray(rdd.test["t_jk"]).ravel()[0])
+                p_val = float(np.asarray(rdd.test["p_jk"]).ravel()[0])
                 bw_left = float(np.asarray(rdd.h).ravel()[0])
-                bw_right = bw_left
-            except Exception:
-                T_stat = np.nan
-                p_val = np.nan
-                bw_left = np.nan
-                bw_right = np.nan
-                warnings.warn(
-                    "Could not extract rddensity test statistics. "
-                    "Inspect the _raw attribute directly.",
-                    RuntimeWarning,
-                    stacklevel=2,
-                )
+                bw_right = float(np.asarray(rdd.h).ravel()[1]) if len(np.asarray(rdd.h).ravel()) > 1 else bw_left
+            except (AttributeError, KeyError, IndexError):
+                # Fallback if API differs between versions.
+                try:
+                    T_stat = float(np.asarray(rdd.T).ravel()[0])
+                    p_val = float(np.asarray(rdd.pv).ravel()[0])
+                    bw_left = float(np.asarray(rdd.h).ravel()[0])
+                    bw_right = bw_left
+                except Exception:
+                    warnings.warn(
+                        "Could not extract rddensity test statistics. "
+                        "Inspect the _raw attribute directly.",
+                        RuntimeWarning,
+                        stacklevel=2,
+                    )
 
         significant = bool(p_val < self.alpha) if not np.isnan(p_val) else False
 

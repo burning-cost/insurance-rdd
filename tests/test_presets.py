@@ -61,7 +61,7 @@ class TestThresholdPreset:
     def test_all_presets_are_frozen(self):
         for key, preset in PRESETS.items():
             with pytest.raises(Exception):
-                object.__setattr__(preset, "cutoff", 999.0)
+                preset.cutoff = 999.0
 
     def test_preset_kernel_is_valid(self):
         valid_kernels = {"triangular", "epanechnikov", "uniform"}

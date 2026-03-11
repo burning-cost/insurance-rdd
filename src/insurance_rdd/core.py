@@ -429,7 +429,7 @@ class InsuranceRD:
         kwargs: dict[str, Any] = {
             "y": y,
             "x": x,
-            "cutoff": self.cutoff,
+            "c": self.cutoff,
             "p": self.p,
             "kernel": self.kernel,
             "bwselect": self.bwselect,
