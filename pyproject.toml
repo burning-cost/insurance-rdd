@@ -4,12 +4,22 @@ build-backend = "hatchling.build"
 
 [project]
 name = "insurance-rdd"
-version = "0.1.0"
+version = "0.1.1"
 description = "Regression Discontinuity Design for insurance pricing rating thresholds"
 readme = "README.md"
 license = { text = "MIT" }
 authors = [{ name = "Burning Cost", email = "pricing.frontier@gmail.com" }]
 requires-python = ">=3.10"
+keywords = [
+    "insurance",
+    "actuarial",
+    "RDD",
+    "regression discontinuity",
+    "pricing",
+    "rating threshold",
+    "UK",
+    "causal inference",
+]
 dependencies = [
     "numpy>=1.24",
     "scipy>=1.10",
@@ -27,6 +37,8 @@ dev = ["pytest>=7.0", "pytest-cov"]
 
 [project.urls]
 Homepage = "https://github.com/burning-cost/insurance-rdd"
+"Bug Tracker" = "https://github.com/burning-cost/insurance-rdd/issues"
+Documentation = "https://github.com/burning-cost/insurance-rdd#readme"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/insurance_rdd"]
